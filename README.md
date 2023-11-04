@@ -82,10 +82,12 @@ docker-compose exec -T backend python manage.py migrate
 docker-compose exec -T backend python manage.py collectstatic --no-input
 docker-compose exec backend python manage.py import_ingredients /data/ingredients.csv
 
+
+
 ### 8. Create a Superuser
 For accessing the admin panel:
 
-docker-compose run --rm web python manage.py createsuperuser
+docker-compose run --rm backend python manage.py createsuperuser
 
 Then, navigate to http://localhost:8000/admin and log in with the ssuperuser credentials and create Tags
 

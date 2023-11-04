@@ -11,7 +11,6 @@ from .models import (
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    """Serializer for the Ingredient model."""
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit')
@@ -20,7 +19,6 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """Serializer for the Tag model."""
 
     class Meta:
         fields = ('id', 'name', 'color', 'slug')
@@ -29,7 +27,6 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class AuthorSerializer(serializers.ModelSerializer):
-    """Serializer for the User model as an Author with subscription status."""
 
     is_subscribed = serializers.SerializerMethodField()
 
@@ -46,7 +43,6 @@ class AuthorSerializer(serializers.ModelSerializer):
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
-    """Serializer for representing Ingredient in a Recipe context."""
 
     id = serializers.PrimaryKeyRelatedField(
         source='ingredient.id', queryset=Ingredient.objects.all())
@@ -66,8 +62,7 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
-    """Serializer for Recipe in a list context with additional attributes."""
-
+    
     author = AuthorSerializer(read_only=True)
     ingredients = serializers.SerializerMethodField()
     tags = TagSerializer(many=True)
@@ -99,7 +94,6 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
 
 class IngredientCreateSerializer(serializers.ModelSerializer):
-    """Serializer for Ingredient creation in a Recipe context."""
 
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
 
@@ -109,7 +103,6 @@ class IngredientCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    """Main serializer for Recipe model with creation and update logic."""
 
     author = AuthorSerializer(read_only=True)
     tags = serializers.PrimaryKeyRelatedField(
@@ -186,7 +179,6 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class SubscribeRecipeSerializer(serializers.ModelSerializer):
-    """Serializer for representing followed Recipes."""
 
     class Meta:
         model = Recipe
