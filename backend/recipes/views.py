@@ -16,7 +16,7 @@ from .serializers import (
     IngredientSerializer, TagSerializer, RecipeSerializer,
     SubscribeRecipeSerializer
 )
-from .shoplist import download_shopping_list
+from .shoplist import download_pdf
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -97,20 +97,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(methods=['GET'], detail=False, permission_classes=[AllowAny])
     def download_shopping_cart(self, request):
-        ingredients_data = (
+        ingredients_obj = (
             IngredientRecipe.objects.filter(recipe__carts__user=request.user)
             .values('ingredient__name', 'ingredient__measurement_unit')
             .annotate(sum_amount=Sum('amount'))
         )
-        ingredients = {
-            item['ingredient__name'].capitalize(): [
-                item['sum_amount'],
-                item['ingredient__measurement_unit']
-            ]
-            for item in ingredients_data
-        }
-        ingredients_list = [
-            f"{str(ind).zfill(2)}. {name} - {values[0]} {values[1]}"
-            for ind, (name, values) in enumerate(ingredients.items(), 1)
-        ]
-        return download_shopping_list(ingredients_list)
+        data_dict = {}
+        ingredients_list = []
+        for item in ingredients_obj:
+            name = item['ingredient__name'].capitalize()
+            unit = item['ingredient__measurement_unit']
+            sum_amount = item['sum_amount']
+            data_dict[name] = [sum_amount, unit]
+        for ind, (key, value) in enumerate(data_dict.items(), 1):
+            if ind < 10:
+                ind = '0' + str(ind)
+            ingredients_list.append(
+                f'{ind}. {key} - ' f'{value[0]} ' f'{value[1]}'
+            )
+        return download_pdf(ingredients_list)
