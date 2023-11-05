@@ -18,7 +18,7 @@ class RecipeFilter(filters.FilterSet):
     def filter_by_user_relation(self, queryset, name, relation_name):
         if self.request.user.is_authenticated:
             return queryset.filter(
-                **{f'{relation_name}__use': self.request.user}
+                **{f'{relation_name}__user': self.request.user}
             )
         return queryset
 
