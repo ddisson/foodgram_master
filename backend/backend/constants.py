@@ -1,34 +1,32 @@
 import os
 
+# Tag constants
 TAG_NAME_MAX_LENGTH = 20
 TAG_SLUG_MAX_LENGTH = 20
 TAG_COLOR_MAX_LENGTH = 7
 TAG_COLOR_DEFAULT = '#49B64E'
 
+# Recipe constants
 RECIPE_MAX_LENGTH = 200
 
+# Ingredient constants
 INGREDIENTS_NAME_MAX_LENGTH = 200
 INGREDIENTS_MEASUREMENT_MAX_LENGTH = 20
 
-FONTS_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts')
-FONT_NAME = 'arial'
-FONT_PATH = os.path.join(FONTS_ROOT, 'arial.ttf')
-
-HEADER_FONT_SIZE = 30
-HEADER_TOP_MARGIN = 20
-HEADER_BOTTOM_MARGIN = 35
-
-BODY_FONT_SIZE = 16
-BODY_LINE_SPACING = 10
-
-TEXT_MARGINS = {
-    'top': 10,
-    'bottom': 12,
-    'right': 12,
-    'left': 50
-}
-
-SPACER = 1
-
+# User constants
 USER_NAME_MAX_LENGTH = 150
 USER_MAIL_MAX_LENGTH = 254
+
+#pdf shoppinglist
+FONTS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), 'services', 'fonts'))
+HEADER_FONT_SIZE = 28
+HEADER_TOP_MARGIN = 20
+HEADER_BOTTOM_MARGIN = 35
+BODY_FONT_SIZE = 14
+BODY_LINE_SPACING = 12
+TEXT_TOP_MARGIN = 10
+TEXT_BOTTOM_MARGIN = 12
+TEXT_RIGHT_MARGIN = 12
+TEXT_LEFT_MARGIN = 50
+SPACER = 1
+STREAM_POSITION = 0
