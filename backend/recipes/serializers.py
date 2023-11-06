@@ -128,18 +128,41 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
         IngredientRecipe.objects.bulk_create(ingredients_list)
 
+    def validate(self, data):
+        # Validate ingredients
+        ingredients_data = data.get('ingredients')
+        if not ingredients_data:
+            raise serializers.ValidationError({
+                'ingredients': 'At least one ingredient is required.'
+            })
+
+        # Validate tags
+        tags_data = data.get('tags')
+        if not tags_data:
+            raise serializers.ValidationError({
+                'tags': 'At least one tag is required.'
+            })
+
+        # Validate cooking time (assuming cooking_time is a field on your model)
+        cooking_time = data.get('cooking_time')
+        if cooking_time is None or cooking_time <= 0:
+            raise serializers.ValidationError({
+                'cooking_time': 'A valid cooking time is required.'
+            })
+
+        # Check for duplicate ingredients by their IDs
+        ingredient_ids = [ingredient['id'] for ingredient in ingredients_data]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise serializers.ValidationError({
+                'ingredients': 'Duplicate ingredients are not allowed.'
+            })
+
+        return data
+
     @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
         tags_data = validated_data.pop('tags')
-
-        if not ingredients_data or not tags_data:
-            raise serializers.ValidationError('At least one ingredient and tag are required.')
-
-        # Check for duplicate ingredients
-        ingredient_ids = [ingredient['id'].id for ingredient in ingredients_data]
-        if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError('Duplicate ingredients are not allowed.')
 
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags_data)
@@ -156,29 +179,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         if tags_data:
             instance.tags.set(tags_data)
-
         if ingredients_data:
             self._create_or_update_ingredients(instance, ingredients_data)
 
         return instance
 
-    def validate(self, data):
-        ingredient_data = self.initial_data.get('ingredients')
-        if ingredient_data:
-            checked_ingredients = set()
-            for ingredient in ingredient_data:
-                ingredient_obj = get_object_or_404(
-                    Ingredient, id=ingredient['id'])
-                if ingredient_obj in checked_ingredients:
-                    raise serializers.ValidationError(
-                        'Duplicate ingredient detected.')
-                checked_ingredients.add(ingredient_obj)
-        return data
-
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients',
-                  'name', 'image', 'text', 'cooking_time')
+        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
 
 
 class SubscribeRecipeSerializer(serializers.ModelSerializer):
