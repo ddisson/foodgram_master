@@ -3,9 +3,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
 
-
 class User(AbstractUser):
-    username_validator = UnicodeUsernameValidator()
     email = models.EmailField(
         verbose_name='адрес электронной почты',
         blank=False,
@@ -20,32 +18,29 @@ class User(AbstractUser):
         max_length=150,
         unique=True,
         help_text='Не более 150 символов.',
-        validators=[username_validator],
+        validators=[UnicodeUsernameValidator()],
         error_messages={
             'unique': 'Пользователь с таким именем уже зарегистрирован.'
         },
     )
-    first_name = models.CharField(verbose_name='имя', max_length=150)
-    last_name = models.CharField(verbose_name='фамилия', max_length=150)
-    is_superuser = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
+    # The 'is_superuser' field has been removed since it's already included in AbstractUser.
+
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     USERNAME_FIELD = 'email'
 
     def save(self, *args, **kwargs):
         if self.username == 'me':
-            return ValidationError('Username не может быть "me".')
+            raise ValidationError('Username не может быть "me".')
         super().save(*args, **kwargs)
 
     @property
     def is_admin(self):
         return self.is_superuser
 
-    def get_full_name(self):
-        return f'{self.first_name} + {self.last_name}'
+    # The 'get_full_name' method has been removed since it's already included in AbstractUser.
 
     def get_short_name(self):
-        return f'{self.username[:15]}'
+        return self.username[:15]
 
     def __str__(self):
         return self.username
@@ -57,9 +52,10 @@ class User(AbstractUser):
         constraints = [
             models.CheckConstraint(
                 check=~models.Q(username='me'),
-                name='Пользователь не может быть назван me!',
+                name='username_not_me'
             )
         ]
+
 
 
 class Subscribe(models.Model):
