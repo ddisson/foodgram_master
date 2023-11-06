@@ -16,7 +16,7 @@ from .serializers import (
     IngredientSerializer, TagSerializer, RecipeSerializer,
     SubscribeRecipeSerializer
 )
-from .shoplist import download_pdf
+from backend.services.shoplist import download_pdf
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
