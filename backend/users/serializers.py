@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.fields import CurrentUserDefault
 from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueTogetherValidator
+from django.core.exceptions import ValidationError
 
 from recipes.serializers import BriefRecipeSerializer
 from .models import User, Subscribe
@@ -19,6 +20,19 @@ class UserSerializer(serializers.ModelSerializer):
         return Subscribe.objects.filter(
             author=obj, user=self.context['request'].user
         ).exists()
+
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'password',
+            'is_subscribed'
+        )
+        extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, data):
         user = User(**data)
@@ -36,60 +50,33 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
-    class Meta:
-        model = User
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'password',
-            'is_subscribed'
-        )
-        extra_kwargs = {'password': {'write_only': True}}
 
-
-class SubscribeListSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField()
+class SubscribeListSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
         source='recipes.count', read_only=True
     )
 
-    def get_is_subscribed(self, obj):
-        if self.context['request'].user.is_anonymous:
-            return False
-        return Subscribe.objects.filter(
-            author=obj, user=self.context['request'].user
-        ).exists()
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
 
     def get_recipes(self, obj):
         request = self.context['request']
-        limit = request.GET.get('recipes_limit')
+        limit = request.query_params.get('recipes_limit')
         author = get_object_or_404(User, id=obj.pk)
         recipes = author.recipes.all()
         if limit:
-            recipes = recipes[:int(limit)]
+            try:
+                limit = int(limit)
+            except ValueError:
+                raise ValidationError('recipes_limit must be an integer.')
+            recipes = recipes[:limit]
         serializer = BriefRecipeSerializer(
             recipes,
             many=True,
             context={'request': request}
         )
         return serializer.data
-
-    class Meta:
-        model = User
-        fields = (
-            'email',
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'is_subscribed',
-            'recipes',
-            'recipes_count'
-        )
 
 
 class SubscribeCreateSerializer(serializers.ModelSerializer):
@@ -101,15 +88,6 @@ class SubscribeCreateSerializer(serializers.ModelSerializer):
         slug_field='id',
         queryset=User.objects.all())
 
-    def validate(self, data):
-        user = data['user']
-        author = data['author']
-        if self.context['request'].method == 'POST' and user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя'
-            )
-        return data
-
     class Meta:
         model = Subscribe
         fields = ('user', 'author')
@@ -120,3 +98,12 @@ class SubscribeCreateSerializer(serializers.ModelSerializer):
                 message='Вы уже подписаны на данного автора'
             )
         ]
+
+    def validate(self, data):
+        user = data['user']
+        author = data['author']
+        if self.context['request'].method == 'POST' and user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя'
+            )
+        return data
