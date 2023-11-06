@@ -5,6 +5,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
 
 from .filters import IngredientFilter, RecipeFilter
 from .models import (
@@ -46,36 +48,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def _handle_favorite_shopping(self, request, pk, model, errors):
-        if request.method == 'POST':
-            if model.objects.filter(user=request.user, recipe__id=pk).exists():
-                return Response(
-                    errors['recipe_in'],
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        recipe, created = model.objects.get_or_create(user=request.user, recipe_id=pk)
 
-            recipe = get_object_or_404(Recipe, id=pk)
-            model.objects.create(user=request.user, recipe=recipe)
-            serializer = SubscribeRecipeSerializer(
-                recipe, context={'request': request})
+        if request.method == 'POST':
+            if not created:
+                return Response(errors['recipe_in'], status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = SubscribeRecipeSerializer(recipe.recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        recipe = model.objects.filter(user=request.user, recipe__id=pk)
-        if recipe.exists():
-            recipe.delete()
-            return Response(
-                {'msg': 'Успешно удалено'},
-                status=status.HTTP_204_NO_CONTENT
-            )
+        elif request.method == 'DELETE':
+            if not created:
+                recipe.delete()
+                return Response({'msg': 'Успешно удалено'}, status=status.HTTP_204_NO_CONTENT)
 
-        return Response(
-            errors['recipe_not_in'],
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(errors['recipe_not_in'], status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['POST', 'DELETE'],
-            detail=True,
-            permission_classes=[AllowAny]
-            )
+    @action(methods=['POST', 'DELETE'], detail=True, permission_classes=[IsAuthenticated])
     def favorite(self, request, pk):
         errors = {
             'recipe_in': {'errors': 'Рецепт уже в избранном'},
@@ -83,17 +72,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         }
         return self._handle_favorite_shopping(request, pk, Favorite, errors)
 
-    @action(methods=['POST', 'DELETE'],
-            detail=True,
-            permission_classes=[AllowAny])
+    @action(methods=['POST', 'DELETE'], detail=True, permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk):
         errors = {
             'recipe_in': {'errors': 'Рецепт уже в списке покупок'},
-            'recipe_not_in': {'error': 'Рецепта нет в спике покупок'}
+            'recipe_not_in': {'error': 'Рецепта нет в списке покупок'}
         }
-        return self._handle_favorite_shopping(
-            request, pk, ShoppingCart, errors
-        )
+        return self._handle_favorite_shopping(request, pk, ShoppingCart, errors)
 
     @action(methods=['GET'], detail=False, permission_classes=[AllowAny])
     def download_shopping_cart(self, request):

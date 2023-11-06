@@ -134,8 +134,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop('tags')
 
         if not ingredients_data or not tags_data:
-            raise serializers.ValidationError(
-                'At least one ingredient and tag are required.')
+            raise serializers.ValidationError('At least one ingredient and tag are required.')
+
+        # Check for duplicate ingredients
+        ingredient_ids = [ingredient['id'].id for ingredient in ingredients_data]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise serializers.ValidationError('Duplicate ingredients are not allowed.')
 
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags_data)
