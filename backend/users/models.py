@@ -2,28 +2,33 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from backend.constants import (
+    EMAIL_VERBOSE_NAME, USERNAME_VERBOSE_NAME,
+    EMAIL_ALREADY_REGISTERED,
+    USERNAME_ALREADY_REGISTERED, USERS_CANNOT_SUBSCRIBE_TO_THEMSELVES,
+    USERNAME_HELP_TEXT, USERNAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
+)
 
 class User(AbstractUser):
     email = models.EmailField(
-        verbose_name='адрес электронной почты',
+        verbose_name=EMAIL_VERBOSE_NAME,
         blank=False,
         unique=True,
-        max_length=254,
+        max_length=EMAIL_MAX_LENGTH,
         error_messages={
-            'unique': 'Такой адрес электронной почты уже зарегистрирован.'
+            'unique': EMAIL_ALREADY_REGISTERED,
         },
     )
     username = models.CharField(
-        verbose_name='логин',
-        max_length=150,
+        verbose_name=USERNAME_VERBOSE_NAME,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        help_text='Не более 150 символов.',
+        help_text=USERNAME_HELP_TEXT,
         validators=[UnicodeUsernameValidator()],
         error_messages={
-            'unique': 'Пользователь с таким именем уже зарегистрирован.'
+            'unique': USERNAME_ALREADY_REGISTERED,
         },
     )
-    # The 'is_superuser' field has been removed since it's already included in AbstractUser.
 
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     USERNAME_FIELD = 'email'
@@ -36,8 +41,6 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return self.is_superuser
-
-    # The 'get_full_name' method has been removed since it's already included in AbstractUser.
 
     def get_short_name(self):
         return self.username[:15]
@@ -52,7 +55,7 @@ class User(AbstractUser):
         constraints = [
             models.CheckConstraint(
                 check=~models.Q(username='me'),
-                name='username_not_me'
+                name='Пользователь не может быть назван me!'
             )
         ]
 
@@ -72,12 +75,18 @@ class Subscribe(models.Model):
         verbose_name='Автор'
     )
 
+    def clean(self):
+        if self.user == self.author:
+            raise ValidationError(USERS_CANNOT_SUBSCRIBE_TO_THEMSELVES)
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
         constraints = [
-            models.UniqueConstraint(
-                fields=('user', 'author'),
-                name='unique_user_follow'
-            )
+            models.UniqueConstraint(fields=['user', 'author'], name='unique_user_follow'),
+            models.CheckConstraint(check=~models.Q(user=models.F('author')), name='cannot_subscribe_to_self'),
         ]
