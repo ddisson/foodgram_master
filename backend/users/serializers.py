@@ -5,7 +5,7 @@ from rest_framework.fields import CurrentUserDefault
 from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.serializers import SubscribeRecipeSerializer
+from recipes.serializers import BriefRecipeSerializer
 from .models import User, Subscribe
 
 
@@ -71,7 +71,7 @@ class SubscribeListSerializer(serializers.ModelSerializer):
         recipes = author.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
-        serializer = SubscribeRecipeSerializer(
+        serializer = BriefRecipeSerializer(
             recipes,
             many=True,
             context={'request': request}

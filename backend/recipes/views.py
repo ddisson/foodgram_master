@@ -16,7 +16,7 @@ from .models import (
 from .permissions import IsAuthenticatedOwnerOrReadOnly
 from .serializers import (
     IngredientSerializer, TagSerializer, RecipeSerializer,
-    SubscribeRecipeSerializer
+    BriefRecipeSerializer
 )
 from backend.services.shoplist import download_pdf
 
@@ -54,7 +54,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if not created:
                 return Response(errors['recipe_in'], status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = SubscribeRecipeSerializer(recipe.recipe, context={'request': request})
+            serializer = BriefRecipeSerializer(recipe.recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         elif request.method == 'DELETE':

@@ -189,7 +189,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
 
 
-class SubscribeRecipeSerializer(serializers.ModelSerializer):
+class BriefRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
