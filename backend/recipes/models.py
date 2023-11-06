@@ -6,14 +6,17 @@ from django.db import models
 from backend.constants import (
     TAG_NAME_MAX_LENGTH, TAG_SLUG_MAX_LENGTH,
     RECIPE_MAX_LENGTH, INGREDIENTS_NAME_MAX_LENGTH,
-    INGREDIENTS_MEASUREMENT_MAX_LENGTH
+    INGREDIENTS_MEASUREMENT_MAX_LENGTH,
+    HEX_COLOR_PATTERN, HEX_COLOR_MESSAGE, HEX_COLOR_DEFAULT,
+    MIN_COOKING_TIME, COOKING_TIME_ERROR_MESSAGE,
+    MIN_AMOUNT, AMOUNT_ERROR_MESSAGE
 )
 
 User = get_user_model()
 
 color_validator = RegexValidator(
-    r'^#[a-fA-F0-9]{6}$',
-    'Enter a valid HEX color. (e.g., "#FF0033")'
+    HEX_COLOR_PATTERN,
+    HEX_COLOR_MESSAGE
 )
 
 
@@ -25,7 +28,7 @@ class Tag(models.Model):
     color = models.CharField(
         'Цвет(HEX)',
         unique=True, max_length=7,
-        default='#49B64E',
+        default=HEX_COLOR_DEFAULT,
         validators=[color_validator]
     )
 
@@ -67,7 +70,7 @@ class Recipe(models.Model):
         'Время приготовления',
         validators=[
             MinValueValidator(
-                1, message='Время приготовления должно быть больше 1 минуты')
+                MIN_COOKING_TIME, message=COOKING_TIME_ERROR_MESSAGE)
         ],
     )
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
@@ -112,7 +115,7 @@ class IngredientRecipe(models.Model):
     amount = models.PositiveSmallIntegerField(
         'Количество ингредиента',
         validators=[MinValueValidator(
-            1, message='Количество не может быть меньше 1')]
+            MIN_AMOUNT, message=AMOUNT_ERROR_MESSAGE)]
     )
 
     class Meta:

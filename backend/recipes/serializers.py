@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -32,8 +31,9 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
-        return not user.is_anonymous and Subscribe.objects.filter(user=user, author=obj).exists()
-
+        return not user.is_anonymous and Subscribe.objects.filter(
+            user=user,
+            author=obj).exists()
 
     class Meta:
         model = User
@@ -129,28 +129,24 @@ class RecipeSerializer(serializers.ModelSerializer):
         IngredientRecipe.objects.bulk_create(ingredients_list)
 
     def validate(self, data):
-        # Validate ingredients
         ingredients_data = data.get('ingredients')
         if not ingredients_data:
             raise serializers.ValidationError({
                 'ingredients': 'At least one ingredient is required.'
             })
 
-        # Validate tags
         tags_data = data.get('tags')
         if not tags_data:
             raise serializers.ValidationError({
                 'tags': 'At least one tag is required.'
             })
 
-        # Validate cooking time (assuming cooking_time is a field on your model)
         cooking_time = data.get('cooking_time')
         if cooking_time is None or cooking_time <= 0:
             raise serializers.ValidationError({
                 'cooking_time': 'A valid cooking time is required.'
             })
 
-        # Check for duplicate ingredients by their IDs
         ingredient_ids = [ingredient['id'] for ingredient in ingredients_data]
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise serializers.ValidationError({
@@ -186,7 +182,10 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = (
+            'id', 'tags', 'author', 'ingredients',
+            'name', 'image', 'text', 'cooking_time'
+        )
 
 
 class BriefRecipeSerializer(serializers.ModelSerializer):
