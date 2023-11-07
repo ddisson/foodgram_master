@@ -1,12 +1,14 @@
 from django.db import transaction
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
+
 
 from users.models import Subscribe
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
 )
+
+from backend.constants import INVALID_COOKING_TIME_NUMBER
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -127,14 +129,15 @@ class RecipeSerializer(serializers.ModelSerializer):
                 'ingredients': 'At least one ingredient is required.'
             })
 
-        tags_data = data.get('tags')
-        if not tags_data:
+        tags_data = data.get('tags', [])
+        if len(tags_data) != len(set(tags_data)):
             raise serializers.ValidationError({
-                'tags': 'At least one tag is required.'
+                'tags': 'Duplicate tags are not allowed.'
             })
 
+
         cooking_time = data.get('cooking_time')
-        if cooking_time is None or cooking_time <= 0:
+        if cooking_time is None or cooking_time <= INVALID_COOKING_TIME_NUMBER:
             raise serializers.ValidationError({
                 'cooking_time': 'A valid cooking time is required.'
             })
@@ -164,11 +167,9 @@ class RecipeSerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop('tags', None)
 
         instance = super().update(instance, validated_data)
+        instance.tags.set(tags_data)
+        self._create_or_update_ingredients(instance, ingredients_data)
 
-        if tags_data:
-            instance.tags.set(tags_data)
-        if ingredients_data:
-            self._create_or_update_ingredients(instance, ingredients_data)
 
         return instance
 
