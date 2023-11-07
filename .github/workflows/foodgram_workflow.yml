@@ -50,6 +50,7 @@ jobs:
         python manage.py test 
     
     - name: Build the Docker image
+      working-directory: ./infra
       run: docker-compose up -d --build
 
     - name: Wait for DB
