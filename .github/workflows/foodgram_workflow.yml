@@ -33,13 +33,21 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        python -m pip install --upgrade pip 
+        pip install flake8==6.0.0 flake8-isort==6.0.0
+        pip install -r ./backend/requirements.txt 
 
-    - name: Run flake8
+    - name: Test with flake8 and django tests
+      env:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: postgres
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5432
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        python -m flake8 backend/
+        cd backend/
+        python manage.py test 
     
     - name: Build the Docker image
       run: docker-compose up -d --build
