@@ -75,7 +75,6 @@ Visit http://localhost:8000 to access the application.
 ### 6. Database Migrations
 Run migrations to initialize the database:
 
-docker-compose exec -T backend python manage.py makemigrations
 docker-compose exec -T backend python manage.py migrate
 
 ## 7. Copy static and ingredients
