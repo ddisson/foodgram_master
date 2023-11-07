@@ -2,11 +2,13 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+
 from backend.constants import (
     EMAIL_VERBOSE_NAME, USERNAME_VERBOSE_NAME,
     EMAIL_ALREADY_REGISTERED,
     USERNAME_ALREADY_REGISTERED, USERS_CANNOT_SUBSCRIBE_TO_THEMSELVES,
     USERNAME_HELP_TEXT, USERNAME_MAX_LENGTH, EMAIL_MAX_LENGTH,
+    USERS_GET_SHORT_NAME
 )
 
 
@@ -44,7 +46,7 @@ class User(AbstractUser):
         return self.is_superuser
 
     def get_short_name(self):
-        return self.username[:15]
+        return self.username[:USERS_GET_SHORT_NAME]
 
     def __str__(self):
         return self.username
@@ -74,14 +76,6 @@ class Subscribe(models.Model):
         related_name='following',
         verbose_name='Автор'
     )
-
-    def clean(self):
-        if self.user == self.author:
-            raise ValidationError(USERS_CANNOT_SUBSCRIBE_TO_THEMSELVES)
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        return super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Подписка'
