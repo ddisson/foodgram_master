@@ -9,7 +9,7 @@ from backend.constants import (
     INGREDIENTS_MEASUREMENT_MAX_LENGTH,
     HEX_COLOR_PATTERN, HEX_COLOR_MESSAGE, HEX_COLOR_DEFAULT,
     MIN_COOKING_TIME, COOKING_TIME_ERROR_MESSAGE,
-    MIN_AMOUNT, AMOUNT_ERROR_MESSAGE
+    MIN_AMOUNT, AMOUNT_ERROR_MESSAGE, TAG_COLOR_MAX_LENGTH
 )
 
 User = get_user_model()
@@ -27,7 +27,7 @@ class Tag(models.Model):
                             max_length=TAG_SLUG_MAX_LENGTH)
     color = models.CharField(
         'Цвет(HEX)',
-        unique=True, max_length=7,
+        unique=True, max_length=TAG_COLOR_MAX_LENGTH,
         default=HEX_COLOR_DEFAULT,
         validators=[color_validator]
     )
