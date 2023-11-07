@@ -31,9 +31,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
-        return not user.is_anonymous and Subscribe.objects.filter(
-            user=user,
-            author=obj).exists()
+        return not user.is_anonymous and user.following.filter(author=obj).exists()
 
     class Meta:
         model = User
@@ -52,12 +50,7 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = IngredientRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=IngredientRecipe.objects.all(),
-                fields=('ingredient', 'recipe')
-            )
-        ]
+
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -74,9 +67,8 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def _check_user_relation(self, obj, model):
         user = self.context.get('request').user
-        if user.is_anonymous:
-            return False
-        return model.objects.filter(user=user.id, recipe=obj.id).exists()
+        return not user.is_anonymous and model.objects.filter(user=user, recipe=obj).exists()
+
 
     def get_is_favorited(self, obj):
         return self._check_user_relation(obj, Favorite)
