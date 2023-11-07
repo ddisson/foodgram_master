@@ -29,8 +29,7 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Copy .env file
-      run: cp /Users/dmitrydisson/Downloads/foodgram-project-master/infra/.env .env
+
     
     - name: Install dependencies
       run: |
