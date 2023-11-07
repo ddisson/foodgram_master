@@ -1,9 +1,12 @@
 from django.db import transaction
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
+from django.contrib.auth import validators
+from django.core import exceptions
 
 
 from users.models import Subscribe
+
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
 )
@@ -27,20 +30,6 @@ class TagSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class AuthorSerializer(serializers.ModelSerializer):
-
-    is_subscribed = serializers.SerializerMethodField()
-
-    def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        return not user.is_anonymous and user.following.filter(author=obj).exists()
-
-    class Meta:
-        model = User
-        fields = ('email', 'id', 'username', 'first_name',
-                  'last_name', 'is_subscribed')
-
-
 class IngredientRecipeSerializer(serializers.ModelSerializer):
 
     id = serializers.PrimaryKeyRelatedField(
@@ -53,6 +42,87 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
         model = IngredientRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
+
+class AuthorSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(
+        source='recipes.count', read_only=True)
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = (
+            'email', 'id', 'username', 'first_name', 'last_name',
+            'is_subscribed', 'recipes', 'recipes_count', 'password'
+        )
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'email': {'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+        }
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
+            return False
+        return Subscribe.objects.filter(
+            author=obj, user=self.context['request'].user
+        ).exists()
+
+    def get_recipes(self, obj):
+        request = self.context.get('request', None)
+        if request is None:
+            return []
+        limit = request.query_params.get('recipes_limit')
+        queryset = obj.recipes.all()
+        if limit:
+            try:
+                limit = int(limit)
+                queryset = queryset[:limit]
+            except (ValueError, TypeError):
+                raise serializers.ValidationError(
+                    'recipes_limit must be an integer')
+        return BriefRecipeSerializer(
+            queryset, many=True,
+            context={'request': request}
+        ).data
+
+    def validate_password(self, value):
+        if self.context.get('view').action in ['create', 'set_password']:
+            validators.validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=validated_data['email'],
+                username=validated_data['username'],
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name']
+            )
+            user.set_password(validated_data['password'])
+            user.save()
+            return user
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            password = validated_data.pop('password', None)
+            instance = super().update(instance, validated_data)
+            if password:
+                instance.set_password(password)
+                instance.save()
+            return instance
+
+    def validate(self, data):
+        user = User(**data)
+        password = data.get('password')
+        try:
+            validators.validate_password(password=password, user=user)
+        except exceptions.ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return super(AuthorSerializer, self).validate(data)
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -69,8 +139,9 @@ class RecipeListSerializer(serializers.ModelSerializer):
 
     def _check_user_relation(self, obj, model):
         user = self.context.get('request').user
-        return not user.is_anonymous and model.objects.filter(user=user, recipe=obj).exists()
-
+        return not user.is_anonymous and model.objects.filter(
+            user=user, recipe=obj
+        ).exists()
 
     def get_is_favorited(self, obj):
         return self._check_user_relation(obj, Favorite)
@@ -135,7 +206,6 @@ class RecipeSerializer(serializers.ModelSerializer):
                 'tags': 'Duplicate tags are not allowed.'
             })
 
-
         cooking_time = data.get('cooking_time')
         if cooking_time is None or cooking_time <= INVALID_COOKING_TIME_NUMBER:
             raise serializers.ValidationError({
@@ -169,7 +239,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         instance.tags.set(tags_data)
         self._create_or_update_ingredients(instance, ingredients_data)
-
 
         return instance
 

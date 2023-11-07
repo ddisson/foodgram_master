@@ -14,8 +14,7 @@ class SubscriptionsView(generics.ListAPIView):
     serializer_class = SubscribeListSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        return User.objects.filter(following__user=user)
+        return User.objects.filter(following__user=self.request.user)
 
 
 class SubscriptionsViewSet(viewsets.ModelViewSet):
@@ -26,18 +25,14 @@ class SubscriptionsViewSet(viewsets.ModelViewSet):
         methods=['POST']
     )
     def subscribe(self, request, **kwargs):
-        id = kwargs.get('pk')
-        user = self.request.user
-        author = get_object_or_404(User, id=id)
-        data = {'user': user.id, 'author': id}
+        author_id = kwargs.get('pk')
+        user = request.user
+        data = {'user': user.id, 'author': author_id}
         serializer = SubscribeCreateSerializer(
             data=data, context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        follow = Subscribe.objects.create(user=user, author=author)
-        serializer = SubscribeCreateSerializer(
-            follow, context={'request': request}
-        )
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
