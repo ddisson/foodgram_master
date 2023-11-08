@@ -3,6 +3,8 @@ from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
 from django.contrib.auth import validators
 from django.core import exceptions
+from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 
 
 from users.models import Subscribe
@@ -68,7 +70,7 @@ class AuthorSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         return Subscribe.objects.filter(
-            author=obj, user=self.context['request'].user
+            author=obj, user=request.user
         ).exists()
 
     def get_recipes(self, obj):
@@ -90,8 +92,8 @@ class AuthorSerializer(serializers.ModelSerializer):
         ).data
 
     def validate_password(self, value):
-        if self.context.get('view').action in ['create', 'set_password']:
-            validators.validate_password(value)
+        if 'create' in self.context['view'].action:
+            validate_password(value)
         return value
 
     def create(self, validated_data):
@@ -114,15 +116,6 @@ class AuthorSerializer(serializers.ModelSerializer):
                 instance.set_password(password)
                 instance.save()
             return instance
-
-    def validate(self, data):
-        user = User(**data)
-        password = data.get('password')
-        try:
-            validators.validate_password(password=password, user=user)
-        except exceptions.ValidationError as e:
-            raise serializers.ValidationError(e.messages)
-        return super(AuthorSerializer, self).validate(data)
 
 
 class RecipeListSerializer(serializers.ModelSerializer):

@@ -51,7 +51,7 @@ POSTGRES_PASSWORD=postgres
 DB_HOST=db
 DB_PORT=5432
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '158.160.76.30']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '158.160.26.37']
 
 LANGUAGE_CODE=ru-ru 
 
