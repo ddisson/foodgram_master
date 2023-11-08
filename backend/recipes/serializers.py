@@ -1,8 +1,6 @@
 from django.db import transaction
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
-from django.contrib.auth import validators
-from django.core import exceptions
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 
