@@ -49,8 +49,10 @@ class UserRepresentationSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        return request and not request.user.is_anonymous and obj.follower.filter(user=request.user).exists()
-
+        return (
+            request and not request.user.is_anonymous
+            and obj.follower.filter(user=request.user).exists()
+        )
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -60,7 +62,6 @@ class RecipeListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-
 
     def _check_user_relation(self, obj, model):
         user = self.context.get('request').user
@@ -121,23 +122,31 @@ class RecipeSerializer(serializers.ModelSerializer):
     def validate(self, data):
         ingredients_data = data.get('ingredients')
         tags_data = data.get('tags', [])
-        
+
         if not tags_data:
             raise serializers.ValidationError('At least one tag is required.')
-        
+
         if len(tags_data) != len(set(tags_data)):
-            raise serializers.ValidationError('Duplicate tags are not allowed.')
-        
-        if not ingredients_data or not any(ingredient.get('amount') > 0 for ingredient in ingredients_data):
-            raise serializers.ValidationError('At least one ingredient with a valid amount is required.')
-        
-        ingredient_ids = [ingredient.get('id') for ingredient in ingredients_data]
+            raise serializers.ValidationError(
+                'Duplicate tags are not allowed.')
+
+        if not ingredients_data or not any(
+            ingredient.get('amount') > 0 for ingredient in ingredients_data
+        ):
+            raise serializers.ValidationError(
+                'At least one ingredient with a valid amount is required.'
+            )
+
+        ingredient_ids = [ingredient.get('id')
+                          for ingredient in ingredients_data]
         if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError('Duplicate ingredients are not allowed.')
-        
+            raise serializers.ValidationError(
+                'Duplicate ingredients are not allowed.')
+
         cooking_time = data.get('cooking_time')
         if cooking_time is None or cooking_time <= MINIMUM_COOKING_TIME:
-            raise serializers.ValidationError('A valid cooking time is required.')
+            raise serializers.ValidationError(
+                'A valid cooking time is required.')
 
         return data
 

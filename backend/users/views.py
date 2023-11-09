@@ -7,7 +7,12 @@ from rest_framework.views import APIView
 
 
 from .models import User, Subscribe
-from .serializers import SubscribeListSerializer, SubscribeCreateSerializer, UserModificationSerializer
+from .serializers import (
+    SubscribeListSerializer,
+    SubscribeCreateSerializer,
+    UserModificationSerializer
+)
+
 
 class UserCreateUpdateView(APIView):
     def post(self, request):
@@ -58,7 +63,10 @@ class SubscriptionsViewSet(viewsets.ModelViewSet):
         id = kwargs.get('pk')
         user = self.request.user
         author = get_object_or_404(User, id=id)
-        follow = Subscribe.objects.filter(user=user, author=author)
+        follow = Subscribe.objects.filter(
+            user=user,
+            author=author
+        )
         if follow.exists():
             follow.delete()
             return Response(

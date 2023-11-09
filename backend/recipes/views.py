@@ -49,21 +49,36 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def _handle_favorite_shopping(self, request, pk, model, errors):
         recipe = get_object_or_404(Recipe, pk=pk)
-        obj, created = model.objects.get_or_create(user=request.user, recipe=recipe)
+        obj, created = model.objects.get_or_create(
+            user=request.user,
+            recipe=recipe
+        )
 
         if request.method == 'POST':
             if not created:
-                return Response(errors['recipe_in'], status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    errors['recipe_in'],
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-            serializer = BriefRecipeSerializer(recipe, context={'request': request})
+            serializer = BriefRecipeSerializer(
+                recipe,
+                context={'request': request}
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
             if created:
-                return Response(errors['recipe_not_in'], status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    errors['recipe_not_in'],
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             obj.delete()
-            return Response({'msg': 'Успешно удалено'}, status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {'msg': 'Успешно удалено'},
+                status=status.HTTP_204_NO_CONTENT
+            )
 
     @action(
         methods=['POST', 'DELETE'],

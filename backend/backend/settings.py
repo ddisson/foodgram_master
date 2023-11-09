@@ -135,4 +135,3 @@ DJOSER = {
         'user_list': 'recipes.serializers.UserRepresentationSerializer'
     }
 }
-

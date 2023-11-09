@@ -1,10 +1,13 @@
 from rest_framework import serializers
-from rest_framework.generics import get_object_or_404
 from rest_framework.validators import UniqueTogetherValidator
 from django.contrib.auth.password_validation import validate_password
 
-from recipes.serializers import BriefRecipeSerializer, UserRepresentationSerializer
+from recipes.serializers import (
+    BriefRecipeSerializer,
+    UserRepresentationSerializer
+)
 from .models import User, Subscribe
+
 
 class UserModificationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,6 +40,7 @@ class UserModificationSerializer(serializers.ModelSerializer):
         validate_password(value)
         return value
 
+
 class SubscribeListSerializer(UserRepresentationSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
@@ -44,7 +48,8 @@ class SubscribeListSerializer(UserRepresentationSerializer):
     )
 
     class Meta(UserRepresentationSerializer.Meta):
-        fields = UserRepresentationSerializer.Meta.fields + ('recipes', 'recipes_count')
+        fields = UserRepresentationSerializer.Meta.fields + \
+            ('recipes', 'recipes_count')
 
     def get_recipes(self, obj):
         request = self.context.get('request')
@@ -55,12 +60,18 @@ class SubscribeListSerializer(UserRepresentationSerializer):
                 limit = int(limit)
                 queryset = queryset[:limit]
             except (ValueError, TypeError):
-                raise serializers.ValidationError('recipes_limit must be an integer')
-        return BriefRecipeSerializer(queryset, many=True, context={'request': request}).data
+                raise serializers.ValidationError(
+                    'recipes_limit must be an integer')
+        return BriefRecipeSerializer(
+            queryset,
+            many=True,
+            context={'request': request}
+        ).data
 
 
-
-class SubscribeCreateSerializer(serializers.ModelSerializer):
+class SubscribeCreateSerializer(
+    serializers.ModelSerializer
+):
     class Meta:
         model = Subscribe
         fields = ('user', 'author')
