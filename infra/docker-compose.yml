@@ -17,7 +17,7 @@ services:
       - ./.env
 
   backend:
-    imgae: ddisson/foodgram_backend:latest
+    build: /Users/dmitrydisson/Downloads/foodgram-project-master/backend/
     restart: always
     volumes:
       - static:/app/static/

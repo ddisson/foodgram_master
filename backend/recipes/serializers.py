@@ -1,15 +1,12 @@
 from django.db import transaction
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
-from django.contrib.auth.password_validation import validate_password
 
-from users.models import Subscribe
+from backend.constants import MINIMUM_COOKING_TIME
 
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
 )
-
-from backend.constants import INVALID_COOKING_TIME_NUMBER
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -41,90 +38,29 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
-class AuthorSerializer(serializers.ModelSerializer):
+class UserRepresentationSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.IntegerField(
-        source='recipes.count', read_only=True)
-    password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = (
-            'email', 'id', 'username', 'first_name', 'last_name',
-            'is_subscribed', 'recipes', 'recipes_count', 'password'
-        )
-        extra_kwargs = {
-            'password': {'write_only': True},
-            'email': {'required': True},
-            'first_name': {'required': True},
-            'last_name': {'required': True},
-        }
+        fields = ('email', 'id', 'username', 'first_name',
+                  'last_name', 'is_subscribed')
+        read_only_fields = fields
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        if not request or request.user.is_anonymous:
-            return False
-        return Subscribe.objects.filter(
-            author=obj, user=request.user
-        ).exists()
+        return request and not request.user.is_anonymous and obj.follower.filter(user=request.user).exists()
 
-    def get_recipes(self, obj):
-        request = self.context.get('request', None)
-        if request is None:
-            return []
-        limit = request.query_params.get('recipes_limit')
-        queryset = obj.recipes.all()
-        if limit:
-            try:
-                limit = int(limit)
-                queryset = queryset[:limit]
-            except (ValueError, TypeError):
-                raise serializers.ValidationError(
-                    'recipes_limit must be an integer')
-        return BriefRecipeSerializer(
-            queryset, many=True,
-            context={'request': request}
-        ).data
-
-    def validate_password(self, value):
-        if 'create' in self.context['view'].action:
-            validate_password(value)
-        return value
-
-    def create(self, validated_data):
-        with transaction.atomic():
-            user = User.objects.create_user(
-                email=validated_data['email'],
-                username=validated_data['username'],
-                first_name=validated_data['first_name'],
-                last_name=validated_data['last_name']
-            )
-            user.set_password(validated_data['password'])
-            user.save()
-            return user
-
-    def update(self, instance, validated_data):
-        with transaction.atomic():
-            password = validated_data.pop('password', None)
-            instance = super().update(instance, validated_data)
-            if password:
-                instance.set_password(password)
-                instance.save()
-            return instance
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
 
-    author = AuthorSerializer(read_only=True)
+    author = UserRepresentationSerializer(read_only=True)
     ingredients = IngredientRecipeSerializer(source='ingredient', many=True)
     tags = TagSerializer(many=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
-    def get_ingredients(self, obj):
-        ingredients = IngredientRecipe.objects.filter(recipe=obj)
-        return IngredientRecipeSerializer(ingredients, many=True).data
 
     def _check_user_relation(self, obj, model):
         user = self.context.get('request').user
@@ -157,7 +93,7 @@ class IngredientCreateSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
 
-    author = AuthorSerializer(read_only=True)
+    author = UserRepresentationSerializer(read_only=True)
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Tag.objects.all())
     ingredients = IngredientCreateSerializer(many=True)
@@ -184,28 +120,24 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         ingredients_data = data.get('ingredients')
-        if not ingredients_data:
-            raise serializers.ValidationError({
-                'ingredients': 'At least one ingredient is required.'
-            })
-
         tags_data = data.get('tags', [])
+        
+        if not tags_data:
+            raise serializers.ValidationError('At least one tag is required.')
+        
         if len(tags_data) != len(set(tags_data)):
-            raise serializers.ValidationError({
-                'tags': 'Duplicate tags are not allowed.'
-            })
-
-        cooking_time = data.get('cooking_time')
-        if cooking_time is None or cooking_time <= INVALID_COOKING_TIME_NUMBER:
-            raise serializers.ValidationError({
-                'cooking_time': 'A valid cooking time is required.'
-            })
-
-        ingredient_ids = [ingredient['id'] for ingredient in ingredients_data]
+            raise serializers.ValidationError('Duplicate tags are not allowed.')
+        
+        if not ingredients_data or not any(ingredient.get('amount') > 0 for ingredient in ingredients_data):
+            raise serializers.ValidationError('At least one ingredient with a valid amount is required.')
+        
+        ingredient_ids = [ingredient.get('id') for ingredient in ingredients_data]
         if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError({
-                'ingredients': 'Duplicate ingredients are not allowed.'
-            })
+            raise serializers.ValidationError('Duplicate ingredients are not allowed.')
+        
+        cooking_time = data.get('cooking_time')
+        if cooking_time is None or cooking_time <= MINIMUM_COOKING_TIME:
+            raise serializers.ValidationError('A valid cooking time is required.')
 
         return data
 

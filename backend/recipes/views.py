@@ -1,11 +1,12 @@
 from django.db.models import Sum
+from django.shortcuts import get_object_or_404
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
 
 from .filters import IngredientFilter, RecipeFilter
 from .models import (
@@ -47,32 +48,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def _handle_favorite_shopping(self, request, pk, model, errors):
-        recipe, created = model.objects.get_or_create(
-            user=request.user, recipe_id=pk)
+        recipe = get_object_or_404(Recipe, pk=pk)
+        obj, created = model.objects.get_or_create(user=request.user, recipe=recipe)
 
         if request.method == 'POST':
             if not created:
-                return Response(
-                    errors['recipe_in'],
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response(errors['recipe_in'], status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = BriefRecipeSerializer(
-                recipe.recipe, context={'request': request})
+            serializer = BriefRecipeSerializer(recipe, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        elif request.method == 'DELETE':
-            if not created:
-                recipe.delete()
-                return Response(
-                    {'msg': 'Успешно удалено'},
-                    status=status.HTTP_204_NO_CONTENT
-                )
+        if request.method == 'DELETE':
+            if created:
+                return Response(errors['recipe_not_in'], status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(
-            errors['recipe_not_in'],
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            obj.delete()
+            return Response({'msg': 'Успешно удалено'}, status=status.HTTP_204_NO_CONTENT)
 
     @action(
         methods=['POST', 'DELETE'],
