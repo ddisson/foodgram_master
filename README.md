@@ -66,15 +66,20 @@ To get Foodgram up and sailing on your local development environment or on an ex
 
     ```plaintext
     # .env file content
-    SECRET_KEY='your-secret-key'
+    SECRET_KEY='django-insecure-tty(dm80q($gnsb@z0d)j@a2#5$t=+2wp@z-0y@+jj%n)#ay0!'
+
     DB_ENGINE=django.db.backends.postgresql
-    POSTGRES_DB=your-db-name
-    POSTGRES_USER=your-db-user
-    POSTGRES_PASSWORD=your-db-password
+    POSTGRES_DB=postgres
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=postgres
     DB_HOST=db
     DB_PORT=5432
-    ALLOWED_HOSTS=['127.0.0.1', 'localhost', 'your-server-ip']
-    LANGUAGE_CODE='en-us'
+
+    ALLOWED_HOSTS=127.0.0.1,localhost,your_local_ip
+
+    LANGUAGE_CODE=ru-ru 
+
+    DEBUG = False
     ```
 
 5. **Launch with Docker Compose:**
