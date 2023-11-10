@@ -47,38 +47,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def _handle_favorite_shopping(self, request, pk, model, errors):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        obj, created = model.objects.get_or_create(
-            user=request.user,
-            recipe=recipe
-        )
-
+    @staticmethod
+    def __favorite_shopping(request, pk, model, errors):
         if request.method == 'POST':
-            if not created:
+            if model.objects.filter(user=request.user, recipe__id=pk).exists():
                 return Response(
-                    errors['recipe_in'],
+                    {'errors': errors['recipe_in']},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
+            recipe = get_object_or_404(Recipe, id=pk)
+            model.objects.create(user=request.user, recipe=recipe)
             serializer = BriefRecipeSerializer(
-                recipe,
-                context={'request': request}
+                recipe, context={'request': request}
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            if created:
-                return Response(
-                    errors['recipe_not_in'],
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            obj.delete()
+        recipe = model.objects.filter(user=request.user, recipe__id=pk)
+        if recipe.exists():
+            recipe.delete()
             return Response(
                 {'msg': 'Успешно удалено'},
                 status=status.HTTP_204_NO_CONTENT
             )
+        return Response(
+            {'error': errors['recipe_not_in']},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     @action(
         methods=['POST', 'DELETE'],
@@ -86,16 +79,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk):
-        errors = {
-            'recipe_in': {'errors': 'Рецепт уже в избранном'},
-            'recipe_not_in': {'error': 'Рецепта нет в избранном'}
-        }
-        return self._handle_favorite_shopping(
-            request,
-            pk,
-            Favorite,
-            errors
-        )
+        return self.__favorite_shopping(request, pk, Favorite, {
+            'recipe_in': 'Рецепт уже в избранном',
+            'recipe_not_in': 'Рецепта нет в избранном'
+        })
 
     @action(
         methods=['POST', 'DELETE'],
@@ -103,16 +90,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
-        errors = {
-            'recipe_in': {'errors': 'Рецепт уже в списке покупок'},
-            'recipe_not_in': {'error': 'Рецепта нет в списке покупок'}
-        }
-        return self._handle_favorite_shopping(
-            request,
-            pk,
-            ShoppingCart,
-            errors
-        )
+        return self.__favorite_shopping(request, pk, ShoppingCart, {
+            'recipe_in': 'Рецепт уже в списке покупок',
+            'recipe_not_in': 'Рецепта нет в спике покупок'
+        })
+
+    @action(
+        methods=['GET'],
+        detail=False,
+        permission_classes=[IsAuthenticated]
+    )
 
     @action(methods=['GET'], detail=False, permission_classes=[AllowAny])
     def download_shopping_cart(self, request):

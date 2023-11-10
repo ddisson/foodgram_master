@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 from django.contrib.auth.password_validation import validate_password
+from rest_framework.fields import CurrentUserDefault
 
 from recipes.serializers import (
     BriefRecipeSerializer,
@@ -67,11 +68,40 @@ class SubscribeListSerializer(UserRepresentationSerializer):
             many=True,
             context={'request': request}
         ).data
+    
+class UserWithRecipesSerializer(serializers.ModelSerializer):
+    recipes = BriefRecipeSerializer(many=True)
+    recipes_count = serializers.IntegerField(source='recipes.count', read_only=True)
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'recipes', 'recipes_count')
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        return Subscribe.objects.filter(user=user, author=obj).exists()
 
 
-class SubscribeCreateSerializer(
-    serializers.ModelSerializer
-):
+class SubscribeCreateSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        slug_field='id',
+        queryset=User.objects.all(),
+        default=CurrentUserDefault(),
+        ),
+    author = serializers.SlugRelatedField(
+        slug_field='id',
+        queryset=User.objects.all())
+
+    def validate(self, data):
+        user = data['user']
+        author = data['author']
+        if self.context['request'].method == 'POST' and user == author:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя'
+            )
+        return data
+
     class Meta:
         model = Subscribe
         fields = ('user', 'author')
@@ -82,12 +112,3 @@ class SubscribeCreateSerializer(
                 message='Вы уже подписаны на данного автора'
             )
         ]
-
-    def validate(self, data):
-        user = data.get('user', self.context['request'].user)
-        author = data.get('author')
-        if self.context['request'].method == 'POST' and user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя'
-            )
-        return data

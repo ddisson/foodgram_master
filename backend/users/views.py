@@ -10,7 +10,7 @@ from .models import User, Subscribe
 from .serializers import (
     SubscribeListSerializer,
     SubscribeCreateSerializer,
-    UserModificationSerializer
+    UserModificationSerializer, UserWithRecipesSerializer
 )
 
 
@@ -42,31 +42,27 @@ class SubscriptionsView(generics.ListAPIView):
 
 class SubscriptionsViewSet(viewsets.ModelViewSet):
 
-    @action(
-        detail=True,
-        permission_classes=[permissions.IsAuthenticated],
-        methods=['POST']
-    )
+    @action(detail=True, permission_classes=[permissions.IsAuthenticated], methods=['post'])
     def subscribe(self, request, **kwargs):
-        author_id = kwargs.get('pk')
         user = request.user
-        data = {'user': user.id, 'author': author_id}
-        serializer = SubscribeCreateSerializer(
-            data=data, context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        author = get_object_or_404(User, id=kwargs.get('pk'))
+
+        if user == author:
+            return Response({'errors': 'You cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Subscribe.objects.filter(user=user, author=author).exists():
+            return Response({'errors': 'You are already subscribed to this author.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        subscribe = Subscribe.objects.create(user=user, author=author)
+        subscribe_serializer = UserWithRecipesSerializer(author, context={'request': request})
+        return Response(subscribe_serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, **kwargs):
         id = kwargs.get('pk')
         user = self.request.user
         author = get_object_or_404(User, id=id)
-        follow = Subscribe.objects.filter(
-            user=user,
-            author=author
-        )
+        follow = Subscribe.objects.filter(user=user, author=author)
         if follow.exists():
             follow.delete()
             return Response(
