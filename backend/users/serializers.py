@@ -1,6 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from rest_framework.fields import CurrentUserDefault
 
 from recipes.serializers import (
     BriefRecipeSerializer,
@@ -84,5 +83,3 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
         return Subscribe.objects.filter(user=user, author=obj).exists()
-
-
