@@ -86,26 +86,3 @@ class UserWithRecipesSerializer(serializers.ModelSerializer):
         return Subscribe.objects.filter(user=user, author=obj).exists()
 
 
-class SubscribeCreateSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(
-        slug_field='id',
-        queryset=User.objects.all(),
-        default=CurrentUserDefault()
-    )
-    author = serializers.SlugRelatedField(
-        slug_field='id',
-        queryset=User.objects.all()
-    )
-
-    class Meta:
-        model = Subscribe
-        fields = ('user', 'author')
-
-    def validate(self, data):
-        user = data['user']
-        author = data['author']
-        if self.context['request'].method == 'POST' and user == author:
-            raise serializers.ValidationError(
-                'Нельзя подписаться на самого себя'
-            )
-        return data
