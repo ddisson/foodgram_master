@@ -16,7 +16,7 @@ from .models import (
 from .permissions import IsAuthenticatedOwnerOrReadOnly
 from .serializers import (
     IngredientSerializer, TagSerializer, RecipeSerializer,
-    BriefRecipeSerializer
+    BriefRecipeSerializer, RecipeListSerializer
 )
 from backend.services.shoplist import download_pdf
 
@@ -43,6 +43,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticatedOwnerOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return RecipeListSerializer
+        return super().get_serializer_class()
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

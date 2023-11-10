@@ -7,6 +7,7 @@ from rest_framework.validators import UniqueTogetherValidator
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
 )
+from users.models import Subscribe
 from backend.constants import MINIMUM_AMOUNT
 
 
@@ -59,16 +60,17 @@ class UserRepresentationSerializer(serializers.ModelSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        return (
-            request and not request.user.is_anonymous
-            and obj.follower.filter(user=request.user).exists()
-        )
+        if request.user.is_anonymous:
+            return False
+        return Subscribe.objects.filter(
+            user=request.user, author=obj.pk).exists()
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
     author = UserRepresentationSerializer(read_only=True)
     ingredients = IngredientRecipeSerializer(source='ingredient', many=True)
     tags = TagSerializer(many=True)
+    is_subscribed = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -84,6 +86,10 @@ class RecipeListSerializer(serializers.ModelSerializer):
     def get_is_in_shopping_cart(self, obj):
         return self._check_user_relation(obj, ShoppingCart)
 
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        return Subscribe.objects.filter(user=user, author=obj.author).exists()
+
     class Meta:
         model = Recipe
         fields = (
@@ -93,6 +99,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
             'ingredients',
             'is_favorited',
             'is_in_shopping_cart',
+            'is_subscribed',
             'name',
             'image',
             'text',

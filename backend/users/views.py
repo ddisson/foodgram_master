@@ -1,10 +1,11 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status, generics
-from rest_framework import viewsets
+from rest_framework import (
+    permissions, status,
+    generics, viewsets
+)
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 
 from .models import User, Subscribe
 from .serializers import (
