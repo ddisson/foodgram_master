@@ -100,7 +100,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False,
         permission_classes=[IsAuthenticated]
     )
-
     @action(methods=['GET'], detail=False, permission_classes=[AllowAny])
     def download_shopping_cart(self, request):
         ingredients_obj = (

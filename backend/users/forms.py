@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from users.models import Subscribe, User
+from users.models import Subscribe
+
 
 class SubscribeAdminForm(forms.ModelForm):
     class Meta:

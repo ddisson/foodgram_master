@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from .models import User, Subscribe
 from .serializers import (
     SubscribeListSerializer,
-    SubscribeCreateSerializer,
     UserModificationSerializer, UserWithRecipesSerializer
 )
 
@@ -42,20 +41,36 @@ class SubscriptionsView(generics.ListAPIView):
 
 class SubscriptionsViewSet(viewsets.ModelViewSet):
 
-    @action(detail=True, permission_classes=[permissions.IsAuthenticated], methods=['post'])
+    @action(
+        detail=True,
+        permission_classes=[permissions.IsAuthenticated],
+        methods=['post']
+    )
     def subscribe(self, request, **kwargs):
         user = request.user
         author = get_object_or_404(User, id=kwargs.get('pk'))
 
         if user == author:
-            return Response({'errors': 'You cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'errors': 'You cannot subscribe to yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if Subscribe.objects.filter(user=user, author=author).exists():
-            return Response({'errors': 'You are already subscribed to this author.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'errors': 'You are already subscribed to this author.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        subscribe = Subscribe.objects.create(user=user, author=author)
-        subscribe_serializer = UserWithRecipesSerializer(author, context={'request': request})
-        return Response(subscribe_serializer.data, status=status.HTTP_201_CREATED)
+        Subscribe.objects.create(
+            user=user, author=author
+        )
+        subscribe_serializer = UserWithRecipesSerializer(
+            author, context={'request': request})
+        return Response(
+            subscribe_serializer.data,
+            status=status.HTTP_201_CREATED
+        )
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, **kwargs):

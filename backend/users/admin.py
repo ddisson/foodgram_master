@@ -26,6 +26,7 @@ class UserAdmin(admin.ModelAdmin):
         )}),
     )
 
+
 class SubscribeAdminForm(forms.ModelForm):
     class Meta:
         model = Subscribe
@@ -39,6 +40,7 @@ class SubscribeAdminForm(forms.ModelForm):
             raise ValidationError('Нельзя подписаться на самого себя')
         return cleaned_data
 
+
 @admin.register(Subscribe)
 class FollowAdmin(admin.ModelAdmin):
     form = SubscribeAdminForm
@@ -49,6 +51,7 @@ class FollowAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if obj.user == obj.author:
             # Add a non-field error to the form
-            form.add_error(None, ValidationError('You cannot subscribe to yourself.'))
+            form.add_error(None, ValidationError(
+                'You cannot subscribe to yourself.'))
         else:
             super().save_model(request, obj, form, change)

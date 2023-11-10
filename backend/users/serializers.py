@@ -69,15 +69,18 @@ class SubscribeListSerializer(UserRepresentationSerializer):
             many=True,
             context={'request': request}
         ).data
-    
+
+
 class UserWithRecipesSerializer(serializers.ModelSerializer):
     recipes = BriefRecipeSerializer(many=True)
-    recipes_count = serializers.IntegerField(source='recipes.count', read_only=True)
+    recipes_count = serializers.IntegerField(
+        source='recipes.count', read_only=True)
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('email', 'id', 'username', 'first_name', 'last_name', 'is_subscribed', 'recipes', 'recipes_count')
+        fields = ('email', 'id', 'username', 'first_name',
+                  'last_name', 'is_subscribed', 'recipes', 'recipes_count')
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
@@ -88,11 +91,16 @@ class SubscribeCreateSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
         slug_field='id',
         queryset=User.objects.all(),
-        default=CurrentUserDefault(),
-        ),
+        default=CurrentUserDefault()
+    )
     author = serializers.SlugRelatedField(
         slug_field='id',
-        queryset=User.objects.all())
+        queryset=User.objects.all()
+    )
+
+    class Meta:
+        model = Subscribe
+        fields = ('user', 'author')
 
     def validate(self, data):
         user = data['user']

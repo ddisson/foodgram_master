@@ -7,7 +7,7 @@ from rest_framework.validators import UniqueTogetherValidator
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
 )
-from backend.constants import MINUMUM_AMMOUT
+from backend.constants import MINIMUM_AMOUNT
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -72,12 +72,12 @@ class RecipeListSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
-    def _check_user_relation(self, obj, model): 
-        user = self.context.get('request').user 
-        return not user.is_anonymous and model.objects.filter( 
-            user=user, recipe=obj 
+    def _check_user_relation(self, obj, model):
+        user = self.context.get('request').user
+        return not user.is_anonymous and model.objects.filter(
+            user=user, recipe=obj
         ).exists()
-    
+
     def get_is_favorited(self, obj):
         return self._check_user_relation(obj, Favorite)
 
@@ -126,22 +126,38 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         return serializer.data
 
+    def _create_or_update_ingredients(self, instance, ingredients_data):
+        instance.ingredients.clear()
+        ingredients_list = [
+            IngredientRecipe(
+                recipe=instance,
+                ingredient=ingredient_data.get('id'),
+                amount=ingredient_data.get('amount')
+            )
+            for ingredient_data in ingredients_data
+        ]
+        IngredientRecipe.objects.bulk_create(ingredients_list)
+
     @transaction.atomic
     def create(self, validated_data):
-        ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
+        ingredients_data = validated_data.pop('ingredients')
+        tags_data = validated_data.pop('tags')
 
         recipe = Recipe.objects.create(**validated_data)
-        self._set_recipe_relations(recipe, ingredients, tags)
+        recipe.tags.set(tags_data)
+        self._create_or_update_ingredients(recipe, ingredients_data)
+
         return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('ingredients', None)
-        tags = validated_data.pop('tags', None)
+        ingredients_data = validated_data.pop('ingredients', None)
+        tags_data = validated_data.pop('tags', None)
 
         instance = super().update(instance, validated_data)
-        self._set_recipe_relations(instance, ingredients, tags)
+        instance.tags.set(tags_data)
+        self._create_or_update_ingredients(instance, ingredients_data)
+
         return instance
 
     def validate(self, data):
@@ -155,9 +171,11 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Duplicate tags are not allowed.')
 
-        if not ingredients_data or not any(
-            ingredient.get('amount') > MINUMUM_AMMOUT for ingredient in ingredients_data
-        ):
+        if (not ingredients_data
+                or not any(
+                    ingredient.get('amount') > MINIMUM_AMOUNT
+                    for ingredient in ingredients_data
+                )):
             raise serializers.ValidationError(
                 'At least one ingredient with a valid amount is required.'
             )
