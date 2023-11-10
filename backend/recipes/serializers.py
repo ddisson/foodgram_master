@@ -11,8 +11,6 @@ from .models import (
 )
 
 
-
-
 class IngredientSerializer(serializers.ModelSerializer):
 
     class Meta:
