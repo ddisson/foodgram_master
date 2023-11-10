@@ -110,14 +110,3 @@ class SubscribeCreateSerializer(serializers.ModelSerializer):
                 'Нельзя подписаться на самого себя'
             )
         return data
-
-    class Meta:
-        model = Subscribe
-        fields = ('user', 'author')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Subscribe.objects.all(),
-                fields=('user', 'author'),
-                message='Вы уже подписаны на данного автора'
-            )
-        ]
