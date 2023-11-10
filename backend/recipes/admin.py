@@ -48,7 +48,6 @@ class RecipeAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        # After saving the recipe, check if at least one ingredient is associated with it
         if not obj.ingredient_to_recipe.exists():
             raise ValidationError('A recipe must have at least one ingredient.')
 

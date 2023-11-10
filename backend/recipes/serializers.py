@@ -1,11 +1,8 @@
 from django.db import transaction
+
 from drf_base64.fields import Base64ImageField
 from rest_framework import serializers
-from django.shortcuts import get_object_or_404
 from rest_framework.validators import UniqueTogetherValidator
-
-
-from backend.constants import MINIMUM_COOKING_TIME
 
 from .models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, IngredientRecipe, User
@@ -60,11 +57,11 @@ class UserRepresentationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        return (
-            request and not request.user.is_anonymous
-            and obj.follower.filter(user=request.user).exists()
-        )
+        request = self.context.get('request') 
+        return ( 
+            request and not request.user.is_anonymous 
+            and obj.follower.filter(user=request.user).exists() 
+        ) 
 
 
 class RecipeListSerializer(serializers.ModelSerializer):
@@ -139,7 +136,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        
+
         recipe = Recipe.objects.create(**validated_data)
         self._set_recipe_relations(recipe, ingredients, tags)
         return recipe
@@ -148,17 +145,19 @@ class RecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredients', None)
         tags = validated_data.pop('tags', None)
-        
+
         instance = super().update(instance, validated_data)
         self._set_recipe_relations(instance, ingredients, tags)
         return instance
 
     def _set_recipe_relations(self, recipe, ingredients, tags):
         if not ingredients:
-            raise serializers.ValidationError({'ingredients': 'At least one ingredient is required.'})
+            raise serializers.ValidationError(
+                {'ingredients': 'At least one ingredient is required.'})
         if not tags:
-            raise serializers.ValidationError({'tags': 'At least one tag is required.'})
-        
+            raise serializers.ValidationError(
+                {'tags': 'At least one tag is required.'})
+
         recipe.tags.set(tags)
 
         IngredientRecipe.objects.filter(recipe=recipe).delete()
@@ -175,17 +174,20 @@ class RecipeSerializer(serializers.ModelSerializer):
     def validate(self, data):
         ingredients = data.get('ingredients')
         if not ingredients:
-            raise serializers.ValidationError({'ingredients': 'At least one ingredient is required.'})
+            raise serializers.ValidationError(
+                {'ingredients': 'At least one ingredient is required.'})
 
         ingredient_ids = [ingredient['id'].id for ingredient in ingredients]
         if len(ingredient_ids) != len(set(ingredient_ids)):
-            raise serializers.ValidationError({'ingredients': 'Duplicate ingredients are not allowed.'})
+            raise serializers.ValidationError(
+                {'ingredients': 'Duplicate ingredients are not allowed.'})
 
         return data
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = ('id', 'tags', 'author', 'ingredients',
+                  'name', 'image', 'text', 'cooking_time')
 
 
 class BriefRecipeSerializer(serializers.ModelSerializer):

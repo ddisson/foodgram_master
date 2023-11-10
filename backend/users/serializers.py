@@ -49,8 +49,9 @@ class SubscribeListSerializer(UserRepresentationSerializer):
     )
 
     class Meta(UserRepresentationSerializer.Meta):
-        fields = UserRepresentationSerializer.Meta.fields + \
-            ('recipes', 'recipes_count')
+        fields = UserRepresentationSerializer.Meta.fields + (
+            'recipes', 'recipes_count',
+        )
 
     def get_recipes(self, obj):
         request = self.context.get('request')
